@@ -1,0 +1,11 @@
+[package]
+name = "windows-test"
+version = "0.1.0"
+authors = ["skeleten <janpelle.thomson@stud.tu-darmstadt.de>"]
+
+[dependencies]
+winapi = "*"
+user32-sys = "*"
+gdi32-sys = "*"
+kernel32-sys = "*"
+wio = "*"
