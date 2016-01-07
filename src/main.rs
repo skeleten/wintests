@@ -8,6 +8,7 @@ extern crate wio;
 #[macro_use] extern crate bitflags;
 
 mod ml;
+mod colors;
 
 use winapi::*;
 use user32::*;
@@ -16,10 +17,8 @@ use kernel32::*;
 use wio::wide::*;
 
 use ml::*;
-
+use colors::*;
 use std::ffi::OsString;
-use std::ops::Deref;
-
 
 pub fn main() {
     println!("common main :(");
@@ -30,32 +29,38 @@ pub fn main() {
 }
 
 #[no_mangle] #[allow(non_snake_case, unused_variables)]
-pub unsafe extern "system" fn WinMain(hinstance: HINSTANCE, prevInstance: HINSTANCE, cmdLine: LPSTR, cmdShow: i32) -> u32 {
+pub unsafe extern "system" fn WinMain(hinstance: HINSTANCE,
+                                      prevInstance: HINSTANCE,
+                                      cmdLine: LPSTR,
+                                      cmdShow: i32,
+                                    ) -> u32 {
     let mut classname: Vec<u16> = OsString::from("myWindowClass").to_wide_null();
-    let mut wndtitle: Vec<u16> = OsString::from("Title").to_wide_null();
     WindowClassBuilder::new()
         .set_style(HRedraw | VRedraw)
         .set_procedure(Some(wndProc))
         .set_hinstance(hinstance)
         .set_icon(LoadIconW(std::ptr::null_mut(), IDI_APPLICATION))
-        .set_background_brush(CreateSolidBrush(Color::from_rbg(50, 50, 50).to_int()))
+        .set_background_brush(CreateSolidBrush(colors::DARK_GRAY.to_int()))
         .set_class_name(classname.as_mut_ptr())
         .set_icon_small(LoadIconW(std::ptr::null_mut(), IDI_APPLICATION))
         .set_cursor(LoadCursorW(std::ptr::null_mut(), IDC_ARROW))
         .register().expect("Could't register window class.");
 
-    let hwnd = CreateWindowExW(
-        WS_EX_CLIENTEDGE,
-        classname.as_mut_ptr(),
-        wndtitle.as_mut_ptr(),
-        WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT,
-        400, 400,
-        std::ptr::null_mut(), std::ptr::null_mut(),
-        hinstance, std::ptr::null_mut());
+    let hwnd = WindowBuilder::new(hinstance, "myWindowClass".to_string())
+                .set_title("Test Window".to_string())
+                .set_width(400).set_height(400)
+                .build().ok().unwrap();
+
     if hwnd.is_null() {
         println!("hwnd is null ({})", GetLastError());
     }
+
+    let mut lbl = Box::new(Label::new());
+    lbl.font_builder.set_height(24).set_face("Fira Code".to_string());
+    lbl.text =">- Test -<".to_string();
+    lbl.foreground_color = colors::WHITE;
+
+    get_window_from_handle_mut(&hwnd).add_control(lbl);
 
     ShowWindow(hwnd, cmdShow);
     UpdateWindow(hwnd);
@@ -67,48 +72,40 @@ pub unsafe extern "system" fn WinMain(hinstance: HINSTANCE, prevInstance: HINSTA
     };
 
     return 0;
-
 }
 
-unsafe fn draw_message(context: &PaintContext) {
-    /* Draw a string */
-    let font_name = OsString::from("Fira Code").to_wide_null();
-    let message = OsString::from("-> ~=Test <-").to_wide_null();
-
-    let font = CreateFontW(24, 0, 0, 0,
-        FW_DONTCARE,
-        FALSE as DWORD,
-        FALSE as DWORD,
-        FALSE as DWORD,
-        DEFAULT_CHARSET,
-        OUT_DEFAULT_PRECIS,
-        CLIP_DEFAULT_PRECIS,
-        DEFAULT_QUALITY,
-        DEFAULT_PITCH,
-        font_name.as_ptr());
-
-    let mut rect = std::mem::zeroed();
-    SelectObject(**context, font as *mut c_void);
-    SetTextColor(**context, Color::from_rbg(255, 255, 255).to_int());
-    GetClientRect(*context.window, &mut rect);
-    SetBkMode(**context, TRANSPARENT);
-    rect.left= 40;
-    rect.top = 10;
-    DrawTextW(**context, message.as_ptr(), -1, &mut rect, DT_SINGLELINE | DT_NOCLIP);
+unsafe fn get_window_from_handle<'a>(handle: &'a HWND) -> &'a Window {
+    let ptr = GetWindowLongPtrW(*handle, GWLP_USERDATA) as *mut Window;
+    &*ptr
 }
 
-unsafe fn repaint_window(context: &PaintContext) {
-    draw_message(context);
+unsafe fn get_window_from_handle_mut<'a>(handle: &'a HWND) -> &'a mut Window {
+    let ptr = GetWindowLongPtrW(*handle, GWLP_USERDATA) as *mut Window;
+    &mut *ptr
 }
 
-#[no_mangle] #[allow(non_snake_case, unused_variables)]
-pub unsafe extern "system" fn wndProc(hwnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM) -> LRESULT {
+fn repaint_window(context: &PaintContext) {
+    let window = unsafe {
+        let ptr = GetWindowLongPtrW(*context.window, GWLP_USERDATA) as *mut Window;
+        &*ptr
+    };
+    window.paint(context);
+}
+
+fn destroy_window(handle: HWND) {
+    let window = unsafe { Box::from_raw(GetWindowLongPtrW(handle, GWLP_USERDATA) as *mut Window) };
+    ::std::mem::drop(window);
+}
+
+#[allow(non_snake_case, unused_variables)]
+unsafe extern "system" fn wndProc(hwnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM) -> LRESULT {
     match msg {
         WM_CLOSE => {
             DestroyWindow(hwnd);
             0
         },
         WM_DESTROY => {
+            destroy_window(hwnd);
             PostQuitMessage(0);
             0
         },
