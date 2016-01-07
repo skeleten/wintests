@@ -7,7 +7,7 @@ use wio::wide::*;
 
 use std::mem;
 use std::ffi::OsString;
-use std::ops::{ Deref, DerefMut };
+use std::ops::{ Deref };
 
 pub struct DeviceContext<'a> {
     window: &'a HWND,
@@ -94,6 +94,8 @@ bitflags!{
     }
 }
 
+// TODO: rewrite this, using constants in the `WindowClass` trait!
+// also shouldn't really contain a WNDCLASSEXW, but the individual properties instead.
 pub struct WindowClassBuilder(WNDCLASSEXW);
 
 impl WindowClassBuilder {
@@ -206,12 +208,26 @@ pub struct WindowBuilder<T: Window> {
     _phantom: ::std::marker::PhantomData<T>,
 }
 
-impl<T: Window> WindowBuilder<T> {
+pub fn get_window_from_handle<'a>(handle: &'a HWND) -> &'a Box<Window> {
+    unsafe {
+        let ptr = GetWindowLongPtrW(*handle, GWLP_USERDATA) as *const Box<Window>;
+        &*ptr
+    }
+}
+
+pub fn get_window_from_handle_mut<'a>(handle: &'a mut HWND) -> &'a mut Box<Window> {
+    unsafe {
+        let ptr = GetWindowLongPtrW(*handle, GWLP_USERDATA) as *mut Box<Window>;
+        &mut *ptr
+    }
+}
+
+impl<T: Window + WindowClass> WindowBuilder<T> {
     pub fn new(instance: HINSTANCE) -> Self {
         WindowBuilder {
             ex_style:   T::default_extended_style(),
-            class_name: T::class_name(),
-            window_name: T::default_window_name(),
+            class_name: T::class_name().to_string(),
+            window_name: T::default_title().to_string(),
             style: T::default_style(),
             pos_x: CW_USEDEFAULT,
             pos_y: CW_USEDEFAULT,
@@ -247,7 +263,7 @@ impl<T: Window> WindowBuilder<T> {
             if handle.is_null() {
                 Err(GetLastError())
             } else {
-                let window = Box::new(Box::new(WindowCore::from_handle(handle)));
+                let window: Box<Box<Window>> = Box::new(T::from_handle(handle));
                 SetWindowLongPtrW(handle, GWLP_USERDATA, Box::into_raw(window) as LONG_PTR);
                 Ok(handle)
             }
@@ -291,18 +307,18 @@ impl<T: Window> WindowBuilder<T> {
     }
 }
 
-pub trait Window : Deref<Target = WindowCore> + DerefMut {
-    fn from_handle(handle: HWND) -> Self;
-    fn class_name() -> String;
-    fn default_window_name() -> String {
-        "Window".to_string()
-    }
-    fn default_extended_style() -> u32 {
-        WS_EX_CLIENTEDGE
-    }
-    fn default_style() -> u32 {
-        WS_OVERLAPPEDWINDOW
-    }
+pub trait WindowClass {
+    fn class_name() -> &'static str;
+    fn default_title() -> &'static str;
+    fn default_extended_style() -> DWORD { WS_EX_CLIENTEDGE }
+    fn default_style() -> DWORD { WS_OVERLAPPEDWINDOW }
+    fn from_handle(handle: HWND) -> Box<Window>;
+}
+
+pub trait Window {
+    fn get_core<'a>(&'a self) -> &'a WindowCore;
+    fn get_core_mut<'a>(&'a mut self) -> &'a mut WindowCore;
+    fn on_create(&mut self) { }
 
 }
 
