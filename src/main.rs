@@ -9,6 +9,9 @@ extern crate wio;
 
 mod ml;
 mod colors;
+mod font;
+mod controls;
+
 
 use winapi::*;
 use user32::*;
@@ -18,7 +21,27 @@ use wio::wide::*;
 
 use ml::*;
 use colors::*;
+use controls::label::Label;
+
 use std::ffi::OsString;
+
+struct MyWindow {
+    core: WindowCore,
+}
+
+impl Window for MyWindow {
+    fn deref<'a>(&'a self) -> &'a WindowCore {
+        &self.core
+    }
+
+    fn deref_mut<'a>(&'a mut self) -> &'a mut WindowCore {
+        &mut self.core
+    }
+
+    fn class_name() -> String {
+        "myWindowClass".to_string()
+    }
+}
 
 pub fn main() {
     println!("common main :(");
@@ -46,19 +69,21 @@ pub unsafe extern "system" fn WinMain(hinstance: HINSTANCE,
         .set_cursor(LoadCursorW(std::ptr::null_mut(), IDC_ARROW))
         .register().expect("Could't register window class.");
 
-    let hwnd = WindowBuilder::new(hinstance, "myWindowClass".to_string())
-                .set_title("Test Window".to_string())
+    let hwnd = match WindowBuilder::new(hinstance)
+                .set_title("Test Window")
                 .set_width(400).set_height(400)
-                .build().ok().unwrap();
-
-    if hwnd.is_null() {
-        println!("hwnd is null ({})", GetLastError());
-    }
+                .build() {
+        Ok(handle) => handle,
+        Err(e) => {
+            println!("HWND is NULL! ({})", e);
+            return 0xFFFF_FFFF;
+        }
+    };
 
     let mut lbl = Box::new(Label::new());
-    lbl.font_builder.set_height(24).set_face("Fira Code".to_string());
+    lbl.font_builder.set_height(24).set_face("Fira Code");
     lbl.text =">- Test -<".to_string();
-    lbl.foreground_color = colors::WHITE;
+    lbl.foreground_color = WHITE;
 
     get_window_from_handle_mut(&hwnd).add_control(lbl);
 
@@ -74,27 +99,27 @@ pub unsafe extern "system" fn WinMain(hinstance: HINSTANCE,
     return 0;
 }
 
-unsafe fn get_window_from_handle<'a>(handle: &'a HWND) -> &'a Window {
-    let ptr = GetWindowLongPtrW(*handle, GWLP_USERDATA) as *mut Window;
+unsafe fn get_window_from_handle<'a>(handle: &'a HWND) -> &'a WindowCore {
+    let ptr = GetWindowLongPtrW(*handle, GWLP_USERDATA) as *mut WindowCore;
     &*ptr
 }
 
-unsafe fn get_window_from_handle_mut<'a>(handle: &'a HWND) -> &'a mut Window {
-    let ptr = GetWindowLongPtrW(*handle, GWLP_USERDATA) as *mut Window;
+unsafe fn get_window_from_handle_mut<'a>(handle: &'a HWND) -> &'a mut WindowCore {
+    let ptr = GetWindowLongPtrW(*handle, GWLP_USERDATA) as *mut WindowCore;
     &mut *ptr
 }
 
 fn repaint_window(context: &PaintContext) {
     let window = unsafe {
-        let ptr = GetWindowLongPtrW(*context.window, GWLP_USERDATA) as *mut Window;
+        let ptr = GetWindowLongPtrW(*context.window, GWLP_USERDATA) as *mut WindowCore;
         &*ptr
     };
     window.paint(context);
 }
 
 fn destroy_window(handle: HWND) {
-    let window = unsafe { Box::from_raw(GetWindowLongPtrW(handle, GWLP_USERDATA) as *mut Window) };
-    ::std::mem::drop(window);
+    let window = unsafe { Box::from_raw(GetWindowLongPtrW(handle, GWLP_USERDATA) as *mut WindowCore) };
+    drop(window);
 }
 
 #[allow(non_snake_case, unused_variables)]

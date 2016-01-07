@@ -1,16 +1,13 @@
-#![allow(unused_imports, dead_code, non_upper_case_globals)]
+#![allow(non_upper_case_globals)]
 
 use winapi::*;
 use user32::*;
-use gdi32::*;
 use kernel32::*;
 use wio::wide::*;
 
-use ::colors::*;
-
 use std::mem;
 use std::ffi::OsString;
-use std::ops::Deref;
+use std::ops::{ Deref, DerefMut };
 
 pub struct DeviceContext<'a> {
     window: &'a HWND,
@@ -77,369 +74,6 @@ impl<'a> Deref for PaintContext<'a> {
 
     fn deref(&self) -> &Self::Target {
         &self.context
-    }
-}
-
-#[derive(Clone, Debug)]
-pub enum FontWeight {
-    DontCare,
-    Thin,
-    ExtraLight,
-    UltraLight,
-    Light,
-    Normal,
-    Regular,
-    Medium,
-    Semibold,
-    Demibold,
-    Bold,
-    ExtraBold,
-    UltraBold,
-    Heavy,
-    Black,
-    Other(i32)
-}
-
-impl FontWeight {
-    pub fn to_int(&self) -> i32 {
-        match *self {
-            FontWeight::DontCare        => FW_DONTCARE,
-            FontWeight::Thin            => FW_THIN,
-            FontWeight::ExtraLight      => FW_EXTRALIGHT,
-            FontWeight::UltraLight      => FW_ULTRALIGHT,
-            FontWeight::Light           => FW_LIGHT,
-            FontWeight::Normal          => FW_NORMAL,
-            FontWeight::Regular         => FW_REGULAR,
-            FontWeight::Medium          => FW_MEDIUM,
-            FontWeight::Semibold        => FW_SEMIBOLD,
-            FontWeight::Demibold        => FW_DEMIBOLD,
-            FontWeight::Bold            => FW_BOLD,
-            FontWeight::ExtraBold       => FW_EXTRABOLD,
-            FontWeight::UltraBold       => FW_ULTRABOLD,
-            FontWeight::Heavy           => FW_HEAVY,
-            FontWeight::Black           => FW_BLACK,
-            FontWeight::Other(x)        => x
-        }
-    }
-}
-
-pub enum CharSet {
-    Ansi,
-    Baltic,
-    ChineseBig5,
-    Default,
-    EastEurope,
-    Gb2312,
-    Greek,
-    Hangul,
-    Mac,
-    OEM,
-    Russian,
-    ShiftJIS,
-    Symbol,
-    Turkish,
-    Vietnamese,
-    Johab,
-    Arabic,
-    Hebrew,
-    Thai,
-}
-
-impl CharSet {
-    pub fn to_uint(&self) -> u32 {
-        match *self {
-            CharSet::Ansi               => ANSI_CHARSET,
-            CharSet::Baltic             => BALTIC_CHARSET,
-            CharSet::ChineseBig5        => CHINESEBIG5_CHARSET,
-            CharSet::Default            => DEFAULT_CHARSET,
-            CharSet::EastEurope         => EASTEUROPE_CHARSET,
-            CharSet::Gb2312             => GB2312_CHARSET,
-            CharSet::Greek              => GREEK_CHARSET,
-            CharSet::Hangul             => HANGUL_CHARSET,
-            CharSet::Mac                => MAC_CHARSET,
-            CharSet::OEM                => OEM_CHARSET,
-            CharSet::Russian            => RUSSIAN_CHARSET,
-            CharSet::ShiftJIS           => SHIFTJIS_CHARSET,
-            CharSet::Symbol             => SYMBOL_CHARSET,
-            CharSet::Turkish            => TURKISH_CHARSET,
-            CharSet::Vietnamese         => VIETNAMESE_CHARSET,
-            CharSet::Johab              => JOHAB_CHARSET,
-            CharSet::Arabic             => ARABIC_CHARSET,
-            CharSet::Hebrew             => HEBREW_CHARSET,
-            CharSet::Thai               => THAI_CHARSET,
-        }
-    }
-}
-
-pub enum OutputPrecision {
-    Character,
-    Default,
-    Device,
-    Outline,
-    PsOnly,
-    Raster,
-    String,
-    Stroke,
-    TrueTypeOnly,
-    TrueType,
-}
-
-impl OutputPrecision {
-    pub fn to_uint(&self) -> u32 {
-        match *self {
-            OutputPrecision::Character              => OUT_CHARACTER_PRECIS,
-            OutputPrecision::Default                => OUT_DEFAULT_PRECIS,
-            OutputPrecision::Device                 => OUT_DEVICE_PRECIS,
-            OutputPrecision::Outline                => OUT_OUTLINE_PRECIS,
-            OutputPrecision::PsOnly                 => OUT_PS_ONLY_PRECIS,
-            OutputPrecision::Raster                 => OUT_RASTER_PRECIS,
-            OutputPrecision::String                 => OUT_STRING_PRECIS,
-            OutputPrecision::Stroke                 => OUT_STROKE_PRECIS,
-            OutputPrecision::TrueTypeOnly           => OUT_TT_ONLY_PRECIS,
-            OutputPrecision::TrueType               => OUT_TT_PRECIS,
-        }
-    }
-}
-
-pub enum ClipPrecision {
-    Character,
-    Default,
-    DFADisable,
-    Embedded,
-    LHAngles,
-    Mask,
-    DFAOverride,
-    Stroke,
-    TrueTypeAlways,
-}
-
-impl ClipPrecision {
-    pub fn to_uint(&self) -> u32 {
-        match *self {
-            ClipPrecision::Character        => CLIP_CHARACTER_PRECIS,
-            ClipPrecision::Default          => CLIP_DEFAULT_PRECIS,
-            ClipPrecision::DFADisable       => CLIP_DFA_DISABLE,
-            ClipPrecision::Embedded         => CLIP_EMBEDDED,
-            ClipPrecision::LHAngles         => CLIP_LH_ANGLES,
-            ClipPrecision::Mask             => CLIP_MASK,
-            ClipPrecision::Stroke           => CLIP_STROKE_PRECIS,
-            ClipPrecision::TrueTypeAlways   => CLIP_TT_ALWAYS,
-            // TODO: MISSING CONSTANT
-            ClipPrecision::DFAOverride      => CLIP_DEFAULT_PRECIS,
-        }
-    }
-}
-
-pub enum FontQuality {
-    AntiAliased,
-    ClearType,
-    Default,
-    Draft,
-    NonAntiAliased,
-    Proof,
-}
-
-impl FontQuality {
-    pub fn to_uint(&self) -> u32 {
-        match *self {
-            FontQuality::AntiAliased    => ANTIALIASED_QUALITY,
-            FontQuality::ClearType      => CLEARTYPE_QUALITY,
-            FontQuality::Default        => DEFAULT_QUALITY,
-            FontQuality::Draft          => DRAFT_QUALITY,
-            FontQuality::NonAntiAliased => NONANTIALIASED_QUALITY,
-            FontQuality::Proof          => PROOF_QUALITY,
-        }
-    }
-}
-
-pub enum FontPitch {
-    Decorative,
-    DontCare,
-    Modern,
-    Roman,
-    Script,
-    Swiss,
-}
-
-impl FontPitch {
-    pub fn to_uint(&self) -> u32 {
-        match *self {
-            // TODO: MISSING CONSTANTS :(
-            _ => 0,
-            /*
-            FontPitch::Decorative   => FF_DECORATIVE,
-            FontPitch::DontCare     => FF_DONTCARE,
-            FontPitch::Modern       => FF_MODERN,
-            FontPitch::Roman        => FF_ROMAN,
-            FontPitch::Script       => FF_SCRIPT,
-            FontPitch::Swiss        => FF_SWISS,
-            */
-        }
-    }
-}
-
-pub struct FontBuilder {
-    height: i32,
-    width: i32,
-    escapement: i32,
-    orientation: i32,
-    weight: FontWeight,
-    italic: bool,
-    underline: bool,
-    strikeout: bool,
-    charset: CharSet,
-    output_precision: OutputPrecision,
-    clip_precision: ClipPrecision,
-    quality: FontQuality,
-    pitch: FontPitch,
-    face: String,
-}
-
-impl FontBuilder {
-    pub fn new() -> Self {
-        FontBuilder {
-            height:             12,
-            width:              0,
-            escapement:         0,
-            orientation:        0,
-            weight:             FontWeight::DontCare,
-            italic:             false,
-            underline:          false,
-            strikeout:          false,
-            charset:            CharSet::Default,
-            output_precision:   OutputPrecision::Default,
-            clip_precision:     ClipPrecision::Default,
-            quality:            FontQuality::Default,
-            pitch:              FontPitch::DontCare,
-            face:               String::new()
-        }
-    }
-
-    pub fn build(&self) -> Result<Font, DWORD> {
-        unsafe {
-            let mut face_wide = OsString::from(&self.face).to_wide_null();
-            let italic = if self.italic { TRUE as DWORD } else { FALSE as DWORD };
-            let underline = if self.underline { TRUE as DWORD } else { FALSE as DWORD };
-            let strikeout = if self.strikeout { TRUE as DWORD } else { FALSE as DWORD };
-
-            let handle = CreateFontW(
-                self.height,
-                self.width,
-                self.escapement,
-                self.orientation,
-                self.weight.to_int(),
-                italic,
-                underline,
-                strikeout,
-                self.charset.to_uint(),
-                self.output_precision.to_uint(),
-                self.clip_precision.to_uint(),
-                self.quality.to_uint(),
-                self.pitch.to_uint(),
-                face_wide.as_mut_ptr());
-
-            if handle.is_null() {
-                Err(GetLastError())
-            } else {
-                Ok(Font::new(handle))
-            }
-        }
-    }
-
-    pub fn set_height(&mut self, height: i32) -> &mut Self {
-        self.height = height;
-        self
-    }
-
-    pub fn set_width(&mut self, width: i32) -> &mut Self {
-        self.width = width;
-        self
-    }
-
-    pub fn set_escapement(&mut self, escapement: i32) -> &mut Self {
-        self.escapement = escapement;
-        self
-    }
-
-    pub fn set_orientation(&mut self, orientation: i32) -> &mut Self {
-        self.orientation = orientation;
-        self
-    }
-
-    pub fn set_weight(&mut self, weight: FontWeight) -> &mut Self {
-        self.weight = weight;
-        self
-    }
-
-    pub fn set_italic(&mut self, italic: bool) -> &mut Self {
-        self.italic = italic;
-        self
-    }
-
-    pub fn set_underline(&mut self, underline: bool) -> &mut Self {
-        self.underline = underline;
-        self
-    }
-
-    pub fn set_strikeout(&mut self, strikeout: bool) -> &mut Self {
-        self.strikeout = strikeout;
-        self
-    }
-
-    pub fn set_charset(&mut self, charset: CharSet) -> &mut Self {
-        self.charset = charset;
-        self
-    }
-
-    pub fn set_output_precision(&mut self, precision: OutputPrecision) -> &mut Self {
-        self.output_precision = precision;
-        self
-    }
-
-    pub fn set_clip_precision(&mut self, precision: ClipPrecision) -> &mut Self {
-        self.clip_precision = precision;
-        self
-    }
-
-    pub fn set_quality(&mut self, quality: FontQuality) -> &mut Self {
-        self.quality = quality;
-        self
-    }
-
-    pub fn set_pitch(&mut self, pitch: FontPitch) -> &mut Self {
-        self.pitch = pitch;
-        self
-    }
-
-    pub fn set_face(&mut self, face: String) -> &mut Self {
-        self.face = face;
-        self
-    }
-}
-
-pub struct Font(HFONT);
-
-impl Font {
-    pub fn new(handle: HFONT) -> Self {
-        Font(handle)
-    }
-}
-
-impl Deref for Font {
-    type Target = HFONT;
-
-    fn deref<'a>(&'a self) -> &'a Self::Target {
-        let &Font(ref handle) = self;
-        handle
-    }
-}
-
-impl Drop for Font {
-    fn drop(&mut self) {
-        let &mut Font(ref handle) = self;
-        unsafe {
-            DeleteObject(*handle as *mut c_void);
-        }
     }
 }
 
@@ -556,70 +190,7 @@ pub trait Paintable {
     }
 }
 
-pub struct Label {
-    pub pos_x: usize,
-    pub pos_y: usize,
-    // width/height is questionable
-    pub width: usize,
-    pub height: usize,
-    pub font_builder: FontBuilder,
-    pub text: String,
-    pub foreground_color: Color,
-    // background color?
-    // TODO: Format options
-}
-
-impl Label {
-    pub fn new() -> Self {
-        Label {
-            pos_x: 0,
-            pos_y: 0,
-            width: 0,
-            height: 0,
-            font_builder: FontBuilder::new(),
-            text: String::new(),
-            foreground_color: BLACK,
-        }
-    }
-
-    pub fn set_position(&mut self, x: usize, y: usize) {
-        self.pos_x = x;
-        self.pos_y = y;
-    }
-}
-
-impl Paintable for Label {
-    fn paint(&self, context: &PaintContext) {
-        let text = OsString::from(&self.text).to_wide_null();
-        let font = self.font_builder.build().ok().unwrap();
-        unsafe {
-            let old_font = SelectObject(**context, *font as *mut c_void);
-            SetTextColor(**context, self.foreground_color.to_int());
-            let mut rect = RECT {
-                left: self.pos_x as i32,
-                top: self.pos_y as i32,
-                right: (self.pos_x + self.width) as i32,
-                bottom: (self.pos_y + self.height) as i32,
-            };
-            SetBkMode(**context, TRANSPARENT);
-            DrawTextW(**context, text.as_ptr(), -1, &mut rect, DT_NOCLIP);
-            SelectObject(**context, old_font);
-        }
-    }
-
-    fn needs_repaint(&self, context: &PaintContext) -> bool {
-                self.pos_x <= context.paintstruct.rcPaint.right as usize
-            &&  self.pos_x >= context.paintstruct.rcPaint.left as usize
-        ||      self.pos_y <= context.paintstruct.rcPaint.bottom as usize
-            &&  self.pos_y >= context.paintstruct.rcPaint.top as usize
-        ||      (self.pos_x + self.width) <= context.paintstruct.rcPaint.right as usize
-            &&  (self.pos_x + self.width) >= context.paintstruct.rcPaint.left as usize
-        ||      (self.pos_y + self.height) <= context.paintstruct.rcPaint.bottom as usize
-            &&  (self.pos_y + self.height) >= context.paintstruct.rcPaint.top as usize
-    }
-}
-
-pub struct WindowBuilder {
+pub struct WindowBuilder<T: Window> {
     ex_style:   u32,
     class_name: String,
     window_name: String,
@@ -631,16 +202,17 @@ pub struct WindowBuilder {
     parent: HWND,
     menu: HMENU,
     hinstance: HINSTANCE,
-    lp_param: LPVOID
+    lp_param: LPVOID,
+    _phantom: ::std::marker::PhantomData<T>,
 }
 
-impl WindowBuilder {
-    pub fn new(instance: HINSTANCE, class_name: String) -> Self {
+impl<T: Window> WindowBuilder<T> {
+    pub fn new<S: Into<String>>(instance: HINSTANCE) -> Self {
         WindowBuilder {
-            ex_style:   WS_EX_CLIENTEDGE,
-            class_name: class_name,
-            window_name: String::new(),
-            style: WS_OVERLAPPEDWINDOW,
+            ex_style:   T::default_extended_style(),
+            class_name: T::class_name(),
+            window_name: T::default_window_name(),
+            style: T::default_style(),
             pos_x: CW_USEDEFAULT,
             pos_y: CW_USEDEFAULT,
             width: CW_USEDEFAULT,
@@ -649,6 +221,7 @@ impl WindowBuilder {
             menu: ::std::ptr::null_mut(),
             hinstance: instance,
             lp_param: ::std::ptr::null_mut(),
+            _phantom: ::std::marker::PhantomData,
         }
     }
 
@@ -674,15 +247,15 @@ impl WindowBuilder {
             if handle.is_null() {
                 Err(GetLastError())
             } else {
-                let window = Box::new(Window::from_handle(handle));
+                let window = Box::new(Box::new(WindowCore::from_handle(handle)));
                 SetWindowLongPtrW(handle, GWLP_USERDATA, Box::into_raw(window) as LONG_PTR);
                 Ok(handle)
             }
         }
     }
 
-    pub fn set_title(mut self, name: String) -> Self {
-        self.window_name = name;
+    pub fn set_title<S: Into<String>>(mut self, name: S) -> Self {
+        self.window_name = name.into();
         self
     }
 
@@ -718,14 +291,29 @@ impl WindowBuilder {
     }
 }
 
-pub struct Window {
+pub trait Window : Deref<Target = WindowCore> + DerefMut {
+    fn from_handle(handle: HWND) -> Self;
+    fn class_name() -> String;
+    fn default_window_name() -> String {
+        "Window".to_string()
+    }
+    fn default_extended_style() -> u32 {
+        WS_EX_CLIENTEDGE
+    }
+    fn default_style() -> u32 {
+        WS_OVERLAPPEDWINDOW
+    }
+
+}
+
+pub struct WindowCore {
     handle:     HWND,
     controls:   Vec<Box<Paintable>>,
 }
 
-impl Window {
+impl WindowCore {
     pub fn from_handle(handle: HWND) -> Self {
-        Window {
+        WindowCore {
             handle: handle,
             controls: Vec::new(),
         }
@@ -748,7 +336,7 @@ impl Window {
     }
 }
 
-impl Paintable for Window {
+impl Paintable for WindowCore {
     fn paint(&self, context: &PaintContext) {
         for c in self.controls.iter().filter(|c| c.needs_repaint(context)) {
             c.paint(context);
