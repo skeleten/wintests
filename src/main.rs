@@ -23,25 +23,36 @@ use ml::*;
 use colors::*;
 use controls::label::Label;
 
-use std::ffi::OsString;
-
 struct MyWindow {
     core: WindowCore,
 }
 
 impl Window for MyWindow {
-    fn deref<'a>(&'a self) -> &'a WindowCore {
-        &self.core
-    }
-
-    fn deref_mut<'a>(&'a mut self) -> &'a mut WindowCore {
-        &mut self.core
-    }
-
     fn class_name() -> String {
         "myWindowClass".to_string()
     }
+
+    fn from_handle(handle: HWND) -> Self {
+        MyWindow {
+            core: WindowCore::from_handle(handle)
+        }
+    }
 }
+
+impl std::ops::Deref for MyWindow {
+    type Target = WindowCore;
+
+    fn deref<'a>(&'a self) -> &'a WindowCore {
+        &self.core
+    }
+}
+
+impl std::ops::DerefMut for MyWindow {
+    fn deref_mut<'a>(&'a mut self) -> &'a mut WindowCore {
+        &mut self.core
+    }
+}
+
 
 pub fn main() {
     println!("common main :(");
@@ -57,7 +68,7 @@ pub unsafe extern "system" fn WinMain(hinstance: HINSTANCE,
                                       cmdLine: LPSTR,
                                       cmdShow: i32,
                                     ) -> u32 {
-    let mut classname: Vec<u16> = OsString::from("myWindowClass").to_wide_null();
+    let mut classname: Vec<u16> = MyWindow::class_name().to_wide_null();
     WindowClassBuilder::new()
         .set_style(HRedraw | VRedraw)
         .set_procedure(Some(wndProc))
@@ -69,7 +80,7 @@ pub unsafe extern "system" fn WinMain(hinstance: HINSTANCE,
         .set_cursor(LoadCursorW(std::ptr::null_mut(), IDC_ARROW))
         .register().expect("Could't register window class.");
 
-    let hwnd = match WindowBuilder::new(hinstance)
+    let hwnd = match WindowBuilder::<MyWindow>::new(hinstance)
                 .set_title("Test Window")
                 .set_width(400).set_height(400)
                 .build() {

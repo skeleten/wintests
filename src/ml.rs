@@ -207,7 +207,7 @@ pub struct WindowBuilder<T: Window> {
 }
 
 impl<T: Window> WindowBuilder<T> {
-    pub fn new<S: Into<String>>(instance: HINSTANCE) -> Self {
+    pub fn new(instance: HINSTANCE) -> Self {
         WindowBuilder {
             ex_style:   T::default_extended_style(),
             class_name: T::class_name(),
