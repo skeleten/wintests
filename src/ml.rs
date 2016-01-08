@@ -211,6 +211,9 @@ pub struct WindowBuilder<T: Window> {
 pub fn get_window_from_handle<'a>(handle: &'a HWND) -> &'a Box<Window> {
     unsafe {
         let ptr = GetWindowLongPtrW(*handle, GWLP_USERDATA) as *const Box<Window>;
+        if ptr.is_null() {
+            println!("Getting NULL as window from handle..");
+        }
         &*ptr
     }
 }
@@ -245,6 +248,7 @@ impl<T: Window + WindowClass> WindowBuilder<T> {
         unsafe {
             let class_name = OsString::from(&self.class_name).to_wide_null();
             let window_name = OsString::from(&self.window_name).to_wide_null();
+            let wnd_struct = Box::new(T::new());
             let handle = CreateWindowExW(
                 self.ex_style,
                 class_name.as_ptr(),
@@ -257,14 +261,12 @@ impl<T: Window + WindowClass> WindowBuilder<T> {
                 self.parent,
                 self.menu,
                 self.hinstance,
-                self.lp_param
+                Box::into_raw(wnd_struct) as LPVOID
             );
 
             if handle.is_null() {
                 Err(GetLastError())
             } else {
-                let window: Box<Box<Window>> = Box::new(T::from_handle(handle));
-                SetWindowLongPtrW(handle, GWLP_USERDATA, Box::into_raw(window) as LONG_PTR);
                 Ok(handle)
             }
         }
@@ -312,10 +314,12 @@ pub trait WindowClass {
     fn default_title() -> &'static str;
     fn default_extended_style() -> DWORD { WS_EX_CLIENTEDGE }
     fn default_style() -> DWORD { WS_OVERLAPPEDWINDOW }
-    fn from_handle(handle: HWND) -> Box<Window>;
+
+    fn new() -> Box<Window>;
 }
 
-pub trait Window {
+pub trait Window : Paintable {
+    fn init_handle(&mut self, handle: HWND);
     fn get_core<'a>(&'a self) -> &'a WindowCore;
     fn get_core_mut<'a>(&'a mut self) -> &'a mut WindowCore;
     fn on_create(&mut self) { }
