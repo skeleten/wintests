@@ -18,9 +18,9 @@ impl Color {
     pub fn to_int(&self) -> u32 {
         let &Color(a, r, g, b) = self;
 
-        (b as u32)        |
+        (r as u32)        |
         (g as u32) << 8   |
-        (r as u32) << 16  |
+        (b as u32) << 16  |
         (a as u32) << 24
     }
 }

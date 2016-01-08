@@ -50,6 +50,7 @@ impl Window for MyWindow {
 
 impl Paintable for MyWindow {
     fn paint(&self, context: &PaintContext) {
+        println!("Painting MyWindow!");
         self.get_core().paint(context);
     }
 }
@@ -85,7 +86,7 @@ pub unsafe extern "system" fn WinMain(hinstance: HINSTANCE,
         .set_procedure(Some(wndProc))
         .set_hinstance(hinstance)
         .set_icon(LoadIconW(std::ptr::null_mut(), IDI_APPLICATION))
-        .set_background_brush(CreateSolidBrush(Color(0, 50, 50, 100).to_int()))
+        .set_background_brush(CreateSolidBrush(Color(0, 25, 50, 75).to_int()))
         .set_class_name(classname.as_mut_ptr())
         .set_icon_small(LoadIconW(std::ptr::null_mut(), IDI_APPLICATION))
         .set_cursor(LoadCursorW(std::ptr::null_mut(), IDC_ARROW))
@@ -114,12 +115,14 @@ pub unsafe extern "system" fn WinMain(hinstance: HINSTANCE,
     return 0;
 }
 
-fn repaint_window(handle: HWND, context: &PaintContext) {
-    let window = get_window_from_handle(&handle);
+fn repaint_window(context: &PaintContext) {
+    let window: &Box<Window> = get_window_from_handle(context.window);
+    // TODO FIXME: This isn't actually called/dispatched for some weird reason
     window.paint(context);
 }
 
 fn destroy_window(handle: HWND) {
+    // TODO FIXME: This doesn't actually return for some reason.
     let window = unsafe {
         Box::from_raw(GetWindowLongPtrW(handle, GWLP_USERDATA) as *mut Box<Window>)
     };
@@ -131,7 +134,6 @@ unsafe extern "system" fn wndProc(hwnd: HWND, msg: UINT, wParam: WPARAM, lParam:
     match msg {
         // TODO: override *all* the messages.
         WM_CREATE => {
-            println!("WM_CREATE");
             let st = lParam as *mut CREATESTRUCTW;
             if lParam == 0 || (*st).lpCreateParams.is_null() {
                 println!("Create params are null!");
@@ -143,17 +145,18 @@ unsafe extern "system" fn wndProc(hwnd: HWND, msg: UINT, wParam: WPARAM, lParam:
             0
         },
         WM_CLOSE => {
+            println!("WM_CLOSE");
             DestroyWindow(hwnd);
             0
         },
         WM_DESTROY => {
-            destroy_window(hwnd);
+            // TODO: FIX THIS FUNCTION
+            // destroy_window(hwnd);
             PostQuitMessage(0);
             0
         },
         WM_PAINT =>  {
-            println!("WM_PAINT");
-            repaint_window(hwnd, &PaintContext::begin_paint(&hwnd));
+            repaint_window(&PaintContext::begin_paint(&hwnd));
             0
         },
         msg => DefWindowProcW(hwnd, msg, wParam, lParam)

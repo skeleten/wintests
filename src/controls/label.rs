@@ -60,6 +60,7 @@ impl Paintable for Label {
     }
 
     fn needs_repaint(&self, context: &PaintContext) -> bool {
+        // return true;
                 self.pos_x <= context.paintstruct.rcPaint.right as usize
             &&  self.pos_x >= context.paintstruct.rcPaint.left as usize
         ||      self.pos_y <= context.paintstruct.rcPaint.bottom as usize
