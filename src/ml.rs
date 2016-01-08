@@ -210,7 +210,7 @@ pub struct WindowBuilder<T: Window> {
 
 pub fn get_window_from_handle<'a>(handle: &'a HWND) -> &'a Box<Window> {
     unsafe {
-        let ptr = GetWindowLongPtrW(*handle, GWLP_USERDATA) as *const Box<Window>;
+        let ptr = GetWindowLongPtrW(*handle, GWLP_USERDATA) as *mut Box<Window>;
         if ptr.is_null() {
             println!("Getting NULL as window from handle..");
         }
@@ -323,7 +323,7 @@ pub trait Window : Paintable {
     fn get_core<'a>(&'a self) -> &'a WindowCore;
     fn get_core_mut<'a>(&'a mut self) -> &'a mut WindowCore;
     fn on_create(&mut self) { }
-
+    fn get_debug_name(&self) -> String { "Window Base".to_string() }
 }
 
 pub struct WindowCore {

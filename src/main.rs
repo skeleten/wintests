@@ -46,6 +46,10 @@ impl Window for MyWindow {
         lbl.text = ">- Test -<".to_string();
         self.get_core_mut().add_control(Box::new(lbl));
     }
+
+    fn get_debug_name(&self) -> String {
+        "MyWindow".to_string()
+    }
 }
 
 impl Paintable for MyWindow {
@@ -117,7 +121,9 @@ pub unsafe extern "system" fn WinMain(hinstance: HINSTANCE,
 
 fn repaint_window(context: &PaintContext) {
     let window: &Box<Window> = get_window_from_handle(context.window);
+    println!("Trying to call vtable functions");
     // TODO FIXME: This isn't actually called/dispatched for some weird reason
+    println!("Painting {}", window.get_debug_name());
     window.paint(context);
 }
 
