@@ -1,4 +1,6 @@
 #![allow(dead_code)]
+#![feature(reflect_marker)]
+#![feature(get_type_id)]
 
 extern crate winapi;
 extern crate user32;
@@ -11,17 +13,18 @@ mod ml;
 mod colors;
 mod font;
 mod controls;
+mod message;
+mod window;
 
 
 use winapi::*;
 use user32::*;
-use gdi32::*;
 use kernel32::*;
-use wio::wide::*;
 
 use ml::*;
 use colors::*;
-use controls::label::Label;
+use window::*;
+use controls::label::*;
 
 struct MyWindow {
     core: Option<WindowCore>,
@@ -44,6 +47,7 @@ impl Window for MyWindow {
         let mut lbl = Label::new();
         lbl.font_builder.set_height(24).set_face("Fira Code");
         lbl.text = ">- Test -<".to_string();
+        lbl.foreground_color = WHITE;
         self.get_core_mut().add_control(Box::new(lbl));
     }
 
@@ -54,13 +58,12 @@ impl Window for MyWindow {
 
 impl Paintable for MyWindow {
     fn paint(&self, context: &PaintContext) {
-        println!("Painting MyWindow!");
         self.get_core().paint(context);
     }
 }
 
 impl WindowClass for MyWindow {
-    fn class_name() -> &'static str { "myWindowClass" }
+    fn class_name() -> &'static str { "my_wnd_class_ex" }
     fn default_title() -> &'static str { "My Window Title" }
 
     fn new() -> Box<Window> {
@@ -84,17 +87,7 @@ pub unsafe extern "system" fn WinMain(hinstance: HINSTANCE,
                                       cmdLine: LPSTR,
                                       cmdShow: i32,
                                     ) -> u32 {
-    let mut classname = MyWindow::class_name().to_wide_null();
-    WindowClassBuilder::new()
-        .set_style(HRedraw | VRedraw)
-        .set_procedure(Some(wndProc))
-        .set_hinstance(hinstance)
-        .set_icon(LoadIconW(std::ptr::null_mut(), IDI_APPLICATION))
-        .set_background_brush(CreateSolidBrush(Color(0, 25, 50, 75).to_int()))
-        .set_class_name(classname.as_mut_ptr())
-        .set_icon_small(LoadIconW(std::ptr::null_mut(), IDI_APPLICATION))
-        .set_cursor(LoadCursorW(std::ptr::null_mut(), IDC_ARROW))
-        .register().expect("Could't register window class.");
+    WindowClassBuilder::<MyWindow>::new().register(hinstance);
     println!("Registered window.");
     let hwnd = match WindowBuilder::<MyWindow>::new(hinstance)
                 .set_title("Test Window")
@@ -121,14 +114,10 @@ pub unsafe extern "system" fn WinMain(hinstance: HINSTANCE,
 
 fn repaint_window(context: &PaintContext) {
     let window: &Box<Window> = get_window_from_handle(context.window);
-    println!("Trying to call vtable functions");
-    // TODO FIXME: This isn't actually called/dispatched for some weird reason
-    println!("Painting {}", window.get_debug_name());
     window.paint(context);
 }
 
 fn destroy_window(handle: HWND) {
-    // TODO FIXME: This doesn't actually return for some reason.
     let window = unsafe {
         Box::from_raw(GetWindowLongPtrW(handle, GWLP_USERDATA) as *mut Box<Window>)
     };
@@ -136,7 +125,7 @@ fn destroy_window(handle: HWND) {
 }
 
 #[allow(non_snake_case, unused_variables)]
-unsafe extern "system" fn wndProc(hwnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM) -> LRESULT {
+unsafe extern "system" fn wndProc(mut hwnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM) -> LRESULT {
     match msg {
         // TODO: override *all* the messages.
         WM_CREATE => {
@@ -146,8 +135,8 @@ unsafe extern "system" fn wndProc(hwnd: HWND, msg: UINT, wParam: WPARAM, lParam:
             }
             let mut wnd = Box::from_raw((*st).lpCreateParams as *mut Box<Window>);
             wnd.init_handle(hwnd);
-            SetWindowLongPtrW(hwnd, GWLP_USERDATA, (*st).lpCreateParams as LONG_PTR);
-            wnd.on_create();
+            SetWindowLongPtrW(hwnd, GWLP_USERDATA, Box::into_raw(wnd) as LONG_PTR);
+            get_window_from_handle_mut(&mut hwnd).on_create();
             0
         },
         WM_CLOSE => {
@@ -156,8 +145,7 @@ unsafe extern "system" fn wndProc(hwnd: HWND, msg: UINT, wParam: WPARAM, lParam:
             0
         },
         WM_DESTROY => {
-            // TODO: FIX THIS FUNCTION
-            // destroy_window(hwnd);
+            destroy_window(hwnd);
             PostQuitMessage(0);
             0
         },

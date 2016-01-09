@@ -3,10 +3,13 @@ use user32::*;
 use gdi32::*;
 use wio::wide::*;
 
-
+// NOTE: Do I actually have to fix these if I convert
+// To using a library instead of an binary crate?
 use ::ml::{ Paintable, PaintContext };
 use ::colors::{ Color, BLACK };
 use ::font::{ FontBuilder };
+
+use super::Control;
 
 pub struct Label {
     pub pos_x: usize,
@@ -69,5 +72,13 @@ impl Paintable for Label {
             &&  (self.pos_x + self.width) >= context.paintstruct.rcPaint.left as usize
         ||      (self.pos_y + self.height) <= context.paintstruct.rcPaint.bottom as usize
             &&  (self.pos_y + self.height) >= context.paintstruct.rcPaint.top as usize
+    }
+}
+
+impl Control for Label {
+    #[allow(unused_variables)]
+    fn handle_notify(&mut self, info: *const NMHDR) {
+        // This shouldn't ever happen!
+        unimplemented!();
     }
 }
